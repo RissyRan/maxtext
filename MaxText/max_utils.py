@@ -438,10 +438,13 @@ def get_abstract_state(model, tx, config, rng, mesh, is_training=True):
   abstract_state = jax.eval_shape(init_state_partial, rng)
   state_logical_annotations = nn.get_partition_spec(abstract_state)
   unboxed_abstract_state = unbox_logicallypartioned(abstract_state)
+  print("unboxed_abstract_state", unboxed_abstract_state)
 
   # Initialization
   with mesh, nn_partitioning.axis_rules(config.logical_axis_rules):
     state_mesh_annotations = nn.logical_to_mesh(state_logical_annotations)
+  
+  print("state_mesh_annotations", state_mesh_annotations)
   return unboxed_abstract_state, state_mesh_annotations
 
 def get_kv_cache_annotations(model, config, rng, mesh):

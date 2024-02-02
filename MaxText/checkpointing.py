@@ -113,6 +113,7 @@ def load_state_if_possible(checkpoint_manager: CheckpointManager,
     abstract_param_train_state = train_state.TrainState(step = abstract_unboxed_pre_state.step,\
                                                         params = abstract_unboxed_pre_state.params,\
                                                         tx=None,opt_state = {}, apply_fn=None) # type: ignore
+    print("abstract_param_train_state", abstract_param_train_state)
     full_restored_state = checkpointer.restore(p, item = abstract_param_train_state,\
                                                restore_args = restore_args_param_train_state)
     return None, full_restored_state.params

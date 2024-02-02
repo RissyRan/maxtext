@@ -113,51 +113,51 @@ class MistralDecoderLayer(nn.Module):
     if cfg.num_experts > 1:
         # TODO(ranran): currently, this MoeBlock does not work as expected, and plan to fix it in coming PR.
     
-        # mlp_lnx = linears.MoeBlock(
-        #     config=cfg,
-        #     num_experts=cfg.num_experts,
-        #     num_experts_per_tok=cfg.num_experts_per_tok,
-        #     kernel_init=initializers.nd_dense_init(1.0, 'fan_in', 'truncated_normal'),
-        #     kernel_axes=('embed', 'mlp'),
-        #     name='moe',
-        #     dtype=cfg.dtype,
-        # )(hidden_states, deterministic=deterministic)
-
-        gate_logits = linears.DenseGeneral(
-            cfg.num_experts,
-            dtype=cfg.dtype,
-            kernel_init=initializers.nd_dense_init(
-                1.0, 'fan_in', 'truncated_normal'),
+        mlp_lnx = linears.MoeBlock(
+            config=cfg,
+            num_experts=cfg.num_experts,
+            num_experts_per_tok=cfg.num_experts_per_tok,
+            kernel_init=initializers.nd_dense_init(1.0, 'fan_in', 'truncated_normal'),
             kernel_axes=('embed', 'mlp'),
-            name="gate",
-            use_int8=cfg.int8_training,
-        )(hidden_states)
-        weights, selected_experts = jax.lax.top_k(
-            gate_logits, cfg.num_experts_per_tok)
-        weights = jax.nn.softmax(weights, axis=-1)
-        mlp_lnx = jnp.zeros_like(hidden_states)
-        mlp_lnx = nn.with_logical_constraint(
-            mlp_lnx, ('activation_batch',
-                      'activation_length', 'activation_embed')
-        )
-        for k in range(cfg.num_experts):
-            # batch_idx, nth_expert = jnp.where(selected_experts == k)
-            weights_exp = jnp.sum(jnp.multiply(
-                selected_experts == k, weights), axis=-1)
-            mlp_lnx_exp = linears.MlpBlock(
-                intermediate_dim=cfg.mlp_dim,
-                activations=cfg.mlp_activations,
-                intermediate_dropout_rate=cfg.dropout_rate,
-                dtype=cfg.dtype,
-                name=f'mlp_{k}',
-                config=cfg,
-            )(hidden_states, deterministic=deterministic)
-            mlp_lnx_exp = nn.with_logical_constraint(
-                mlp_lnx_exp, ('activation_batch',
-                              'activation_length', 'activation_embed')
-            )
-            mlp_lnx_exp = weights_exp[:, :, None] * mlp_lnx_exp
-            mlp_lnx += mlp_lnx_exp
+            name='rissy',
+            dtype=cfg.dtype,
+        )(hidden_states, deterministic=deterministic)
+
+        # gate_logits = linears.DenseGeneral(
+        #     cfg.num_experts,
+        #     dtype=cfg.dtype,
+        #     kernel_init=initializers.nd_dense_init(
+        #         1.0, 'fan_in', 'truncated_normal'),
+        #     kernel_axes=('embed', 'mlp'),
+        #     name="gate",
+        #     use_int8=cfg.int8_training,
+        # )(hidden_states)
+        # weights, selected_experts = jax.lax.top_k(
+        #     gate_logits, cfg.num_experts_per_tok)
+        # weights = jax.nn.softmax(weights, axis=-1)
+        # mlp_lnx = jnp.zeros_like(hidden_states)
+        # mlp_lnx = nn.with_logical_constraint(
+        #     mlp_lnx, ('activation_batch',
+        #               'activation_length', 'activation_embed')
+        # )
+        # for k in range(cfg.num_experts):
+        #     # batch_idx, nth_expert = jnp.where(selected_experts == k)
+        #     weights_exp = jnp.sum(jnp.multiply(
+        #         selected_experts == k, weights), axis=-1)
+        #     mlp_lnx_exp = linears.MlpBlock(
+        #         intermediate_dim=cfg.mlp_dim,
+        #         activations=cfg.mlp_activations,
+        #         intermediate_dropout_rate=cfg.dropout_rate,
+        #         dtype=cfg.dtype,
+        #         name=f'mlp_{k}',
+        #         config=cfg,
+        #     )(hidden_states, deterministic=deterministic)
+        #     mlp_lnx_exp = nn.with_logical_constraint(
+        #         mlp_lnx_exp, ('activation_batch',
+        #                       'activation_length', 'activation_embed')
+        #     )
+        #     mlp_lnx_exp = weights_exp[:, :, None] * mlp_lnx_exp
+        #     mlp_lnx += mlp_lnx_exp
     else: 
         mlp_lnx = linears.MlpBlock(
             intermediate_dim=cfg.mlp_dim,
