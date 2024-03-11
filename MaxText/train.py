@@ -477,6 +477,7 @@ def train_loop(config, state=None):
   return state
 
 def main(argv: Sequence[str]) -> None:
+  jax.config.update('jax_cpu_enable_gloo_collectives', True)
   jax.config.update('jax_default_prng_impl', 'unsafe_rbg')
   os.environ["TF_CPP_MIN_LOG_LEVEL"] = "0"
   os.environ["LIBTPU_INIT_ARGS"] = os.environ.get("LIBTPU_INIT_ARGS","") + " --xla_tpu_spmd_rng_bit_generator_unsafe=true"
