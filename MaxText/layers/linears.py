@@ -311,8 +311,7 @@ class MoeBlock(nn.Module):
   def call_gmm(self,
                inputs,
                kernel,
-               group_sizes,
-               tiling: tuple[int, int, int] = (128, 128, 128)):
+               group_sizes):
 
     @functools.partial(
         shard_map.shard_map,
@@ -321,12 +320,12 @@ class MoeBlock(nn.Module):
               (nn.logical_to_mesh_axes(("m", "k"))),
               (nn.logical_to_mesh_axes(("num_groups", "k", "n"))),
               (nn.logical_to_mesh_axes(("num_groups",))),
-              (nn.logical_to_mesh_axes(("m", "k", "n"))),
+              # (nn.logical_to_mesh_axes(("m","k","n"))),
           ),
         out_specs=(nn.logical_to_mesh_axes(("m", "n"))),
         check_rep=False,
     )
-    def gmm(inputs, kernel, group_sizes, tiling):
+    def gmm(inputs, kernel, group_sizes):
       hs_shape = inputs.shape
       if hs_shape[0] % 128:
         # padding
@@ -336,14 +335,13 @@ class MoeBlock(nn.Module):
         inputs = inputs.astype(self.dtype)
       output = mblx.gmm(lhs=inputs, 
                         rhs=kernel, 
-                        group_sizes=group_sizes,
-                        tiling=tiling)
+                        group_sizes=group_sizes)
       if hs_shape[0] % 128:
         output = output[:hs_shape[0]]
 
       return output
   
-    output = gmm(inputs, kernel, group_sizes, tiling)
+    output = gmm(inputs, kernel, group_sizes)
     return output
 
 
@@ -406,16 +404,14 @@ class MoeBlock(nn.Module):
 
     layer_1 = self.call_gmm(sorted_hidden_states,
                               w0_kernel,
-                              group_sizes,
-                              tiling=None)
+                              group_sizes)
     # print("sorted_hidden_states.shape", sorted_hidden_states.shape)
     # print("layer_1.shape", layer_1.shape)
     # print("layer_1", layer_1)
 
     layer_2 = self.call_gmm(sorted_hidden_states,
                               w1_kernel,
-                              group_sizes,
-                              tiling=None)
+                              group_sizes)
 
     layer_1_act = _convert_to_activation_function(cfg.mlp_activations[0])(layer_1)
     # print("layer_1_act", layer_1_act)
@@ -427,8 +423,7 @@ class MoeBlock(nn.Module):
 
     layer_3 = self.call_gmm(intermediate_layer,
                               wo_kernel,
-                              group_sizes,
-                              tiling=None)
+                              group_sizes)
 
     # print("intermediate_layer.shape", intermediate_layer.shape)
     # print("layer_3.shape", layer_3.shape)

@@ -191,9 +191,9 @@ class MixtralTest(unittest.TestCase):
   def test_moe_block(self):
     variables, expected_output = get_expected_output(self.rng, self.hidden_states, self.cfg)
     actual_output = get_moe_output(variables, self.hidden_states, self.cfg, self.mesh)
-    # print("expected_output", expected_output)
+    print("expected_output", expected_output)
     print("actual_output", actual_output)
-    # self.assertTrue(jax.numpy.allclose(expected_output, actual_output, rtol=1e-03, atol=1e-03, equal_nan=False))
+    self.assertTrue(jax.numpy.allclose(expected_output, actual_output, rtol=1e-03, atol=1e-03, equal_nan=False))
 
 
 if __name__ == '__main__':
