@@ -65,8 +65,8 @@ class MoeLoopBlock(nn.Module):
             name='gate')(inputs)
     
     weights, selected_experts = jax.lax.top_k(gate_logits, self.num_experts_per_tok)
-    print("weights from loop", weights)
-    print("selected_experts from loop", selected_experts)
+    #print("weights from loop", weights)
+    #print("selected_experts from loop", selected_experts)
     weights = jax.nn.softmax(weights.astype(jnp.float32), axis=-1)
     mlp_lnx = jnp.zeros_like(inputs)
     weights = weights.astype(self.dtype)
@@ -104,11 +104,11 @@ def get_expected_output(rng, hidden_states, cfg):
           kernel_axes=('embed', 'mlp'),
           dtype=cfg.dtype,
       )
-      variables = model.init(rng, jax.random.normal(rng, (cfg.base_num_query_heads, 
-                                                          cfg.head_dim, 
+      variables = model.init(rng, jax.random.normal(rng, (int(cfg.per_device_batch_size), 
+                                                          cfg.max_target_length, 
                                                           cfg.base_emb_dim)))
-      print("get_expected_output variables", variables)
-      time.simple_timeit(model.apply, variables, hidden_states, tries=1, task="loop")
+      #print("get_expected_output variables", variables)
+      time.simple_timeit(jax.jit(model.apply), variables, hidden_states, tries=10, task="loop")
 
       # start_time = time.time()
       # output = model.apply(variables, hidden_states)
@@ -184,7 +184,7 @@ def get_moe_output(variables, hidden_states, cfg, mesh):
 
       
       # print("get_moe_output expected_variables", variables)
-      time.simple_timeit(model.apply, moe_variables, hidden_states, tries=1, task="megablox")
+      time.simple_timeit(jax.jit(model.apply), moe_variables, hidden_states, tries=10, task="megablox")
       # start_time = time.time()
       # output = model.apply(moe_variables, hidden_states)
       # end_time = time.time()
@@ -195,6 +195,8 @@ def get_moe_output(variables, hidden_states, cfg, mesh):
 class MoeTest(unittest.TestCase):
 
   def setUp(self):
+    import os
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "0"
     pyconfig.initialize(
       [None, 'configs/base.yml'],
       run_name='test',
@@ -206,9 +208,9 @@ class MoeTest(unittest.TestCase):
     self.cfg = pyconfig.config
     self.rng = jax.random.PRNGKey(42)
 
-    num = jnp.arange(self.cfg.base_num_query_heads * self.cfg.head_dim * self.cfg.base_emb_dim)
-    self.hidden_states = jnp.reshape(num, (self.cfg.base_num_query_heads, 
-                                           self.cfg.head_dim, 
+    num = jnp.arange(int(self.cfg.per_device_batch_size * self.cfg.max_target_length * self.cfg.base_emb_dim))
+    self.hidden_states = jnp.reshape(num, (int(self.cfg.per_device_batch_size), 
+                                           self.cfg.max_target_length, 
                                            self.cfg.base_emb_dim))
     print("hidden_states", self.hidden_states.shape)
 

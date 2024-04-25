@@ -14,12 +14,12 @@
 
 # model config for mixtral testing purpose only
 
-base_emb_dim: 8
+base_emb_dim: 2048
 base_num_query_heads: 2
 base_num_kv_heads: 4
-base_mlp_dim: 7
+base_mlp_dim: 8192
 base_num_decoder_layers: 5
-head_dim: 3
+head_dim: 5
 mlp_activations: ["silu","linear"]
 vocab_size: 32000
 enable_dropout: False
